@@ -1,0 +1,30 @@
+{
+    "name": "bot_cantante_banquillo",
+    "version": "1.0.0",
+    "description": "Bot para reproducir audio de YT. Desarrollado por MelarcAB",
+    "main": "index.js",
+    "scripts": {
+        "start": "nodemon bot.js",
+        "test": "echo \"Error: no test specified\" && exit 1"
+    },
+    "keywords": [
+        "bot",
+        "music",
+        "play",
+        "melarc",
+        "melarcab",
+        "discord"
+    ],
+    "author": "MelarcAB",
+    "license": "ISC",
+    "dependencies": {
+        "@discordjs/opus": "github:discordjs/opus",
+        "@discordjs/voice": "^0.9.0",
+        "discord.js": "^13.6.0",
+        "ffmpeg-static": "^4.4.1",
+        "libsodium-wrappers": "^0.7.10",
+        "node-opus": "^0.3.3",
+        "nodemon": "^2.0.16",
+        "ytdl-core": "^4.11.0"
+    }
+}

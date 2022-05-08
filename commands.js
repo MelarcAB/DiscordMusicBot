@@ -5,8 +5,14 @@ var commands = {
     "pause": {
         "function": "pausePlayer"
     },
+    "stop": {
+        "function": "stopPlayer"
+    },
     "colas": {
         "function": "showQueue"
+    },
+    "skip": {
+        "function": "skipSong"
     }
 }
 

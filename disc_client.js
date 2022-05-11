@@ -9,6 +9,7 @@ const path = require("path")
 const commands = require("./commands.js");
 const fs = require('fs');
 const { exit } = require('process');
+const { url } = require('inspector');
 
 const url_lists = []
 var storedFunctions = {}
@@ -33,16 +34,28 @@ client.on('messageCreate', async msg => {
     let command = message.slice(1, message.indexOf(" ") > 0 ? message.indexOf(" ") : message.length);
     let arguments = message.split(" ")
     try {
-
-
         procesarComand(command, msg)
+        console.log(url_lists)
+
     } catch (e) {
         console.log('Error')
     }
 });
 
 
-player.on(AudioPlayerStatus.Playing, () => {});
+player.on(AudioPlayerStatus.Playing, () => {
+    if (url_lists.length > 0) {
+        console.log('START PLAYING > ' + url_lists[0])
+        url_lists.shift();
+        if (url_lists.length > 0) {
+            player.play(createAudioResource(ytdl(url_lists[0])))
+        }
+    }
+});
+
+player.on(AudioPlayerStatus.Buffering, () => {
+    console.log("status bvuffering")
+});
 
 
 //Cuando el reproductor para un audio
@@ -67,28 +80,38 @@ function initBot() {
 function procesarComand(command, msg = []) {
     let message = (msg.content)
     let arguments = message.split(" ")
-
     let comandos = (commands.getCommands())
     try {
         if (comandos[command] == undefined) {
             console.log("Comando no encontrado")
             return false
         } else {
-
             let function_to_call = comandos[command].function
-
-            //Call function using functionCommand
+                //Call function using functionCommand
             storedFunctions[function_to_call](arguments, msg)
         }
     } catch (e) {}
 
 }
 
+
+
+
+//Event on exception uncaught
 process.on('uncaughtException', function(err) {
-    console.log('Excepcio: ' + err);
-    exit
+    console.log('Excepcion: ' + err);
+    console.log('Quitando de la lista: ' + url_lists[0]);
+    url_lists.shift()
 });
 
+
+function playNextSong() {
+    if (url_lists.length > 0) {
+        console.log("PASANDO A LA SIGUIENTE CANCION")
+    } else {
+        console.log("NO HAY MÁS CANCIONES A LA LISTA")
+    }
+}
 
 
 storedFunctions.playPlayer = async function(args, msg) {
@@ -124,13 +147,17 @@ storedFunctions.playPlayer = async function(args, msg) {
 
         return;
     } else {
-        ytdl(args[1])
 
         url_lists.push(args[1]);
-        if (player.state.status == 'idle') {
+        console.log("URL AÑADIDA AL PLAYER")
+        console.log('status actual : ' + player.state.status)
 
+        if (url_lists.length > 1) {
+            setTimeout(function() { console.log('espero 2') }, 2000);
+        }
+        if (player.state.status == 'idle' && url_lists.length == 1) {
+            console.log('status idle')
             let voice_channel_id = msg.member.voice.channel.id
-
             try {
                 //Join voice channel del usuario que envió el comando 
                 if (voice_channel_id) {
@@ -140,12 +167,13 @@ storedFunctions.playPlayer = async function(args, msg) {
                         adapterCreator: msg.guild.voiceAdapterCreator
                     })
                     connection.subscribe(player)
-                    if (ytdl(url_lists[0])) { return }
-                    player.play(createAudioResource(ytdl(url_lists[0])))
-                    url_lists.shift();
+                    if (url_lists.length == 1) {
+                        //setTimeout(function() { console.log('espero 2') }, 2000);
+                        await player.play(createAudioResource(await ytdl(url_lists[0])))
+                    }
                 }
             } catch (e) {
-                console.log('error v2')
+                console.log(e)
             }
         }
     }
@@ -154,11 +182,13 @@ storedFunctions.playPlayer = async function(args, msg) {
 
 storedFunctions.stopPlayer = async function(args) {
     player.stop();
-    //let yt_song = ytdl("https://www.youtube.com/watch?v=JM3Wyn2VmHg").pipe(fs.createWriteStream('audio/yt_audio.mp3')
+    console.log("PLAYER STOP")
+        //let yt_song = ytdl("https://www.youtube.com/watch?v=JM3Wyn2VmHg").pipe(fs.createWriteStream('audio/yt_audio.mp3')
 
 }
 
 storedFunctions.pausePlayer = async function(args) {
+    console.log("PLAYER PAUSE")
     player.pause();
     //let yt_song = ytdl("https://www.youtube.com/watch?v=JM3Wyn2VmHg").pipe(fs.createWriteStream('audio/yt_audio.mp3')
 
@@ -166,8 +196,23 @@ storedFunctions.pausePlayer = async function(args) {
 
 storedFunctions.skipSong = async function(args) {
     player.stop();
-    //let yt_song = ytdl("https://www.youtube.com/watch?v=JM3Wyn2VmHg").pipe(fs.createWriteStream('audio/yt_audio.mp3')
+    await player.play(createAudioResource(await ytdl(url_lists[0])))
+    console.log("PLAYER SKIP")
 
+}
+
+storedFunctions.playerStatus = async function(args) {
+    console.log('STATUS PLAYER : ' + player.state.status)
+}
+
+storedFunctions.showQueue = async function(args, msg) {
+    console.log(url_lists)
+    if (url_lists.length == 0) {
+        msg.channel.send("La cola está vacía. Para añadir nuevas URLs de Youtube usa '!play URL_VIDEO'");
+        return;
+    }
+
+    msg.channel.send(url_lists.toString())
 }
 
 

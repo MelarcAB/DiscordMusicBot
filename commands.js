@@ -8,11 +8,14 @@ var commands = {
     "stop": {
         "function": "stopPlayer"
     },
-    "colas": {
+    "cola": {
         "function": "showQueue"
     },
     "skip": {
         "function": "skipSong"
+    },
+    "status": {
+        "function": "playerStatus"
     }
 }
 

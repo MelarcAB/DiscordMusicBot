@@ -46,12 +46,6 @@ client.on('messageCreate', async msg => {
 
 player.on(AudioPlayerStatus.Playing, () => {
     console.log('>START PLAYING > ' + url_lists[0])
-    /*  if (url_lists.length > 0) {
-          url_lists.shift();
-          if (url_lists.length > 0) {
-              player.play(createAudioResource(ytdl(url_lists[0])))
-          }
-      }*/
 });
 
 player.on(AudioPlayerStatus.Buffering, () => {
@@ -65,8 +59,8 @@ player.on(AudioPlayerStatus.Idle, () => {
     console.log("idle")
     try {
         if (url_lists.length > 0) {
-            player.play(createAudioResource(ytdl(url_lists[0])))
             url_lists.shift()
+            player.play(createAudioResource(ytdl(url_lists[0])))
         }
 
         /*if (url_lists.length > 0) {

@@ -10,6 +10,7 @@ const commands = require("./commands.js");
 const fs = require('fs');
 const { exit } = require('process');
 const { url } = require('inspector');
+// import {url} from "inspector"
 
 const url_lists = []
 var storedFunctions = {}
@@ -18,8 +19,8 @@ var storedFunctions = {}
 //creo variable myIntents porque no reproducia el audio
 const client = new Discord.Client({
     intents: [Intents.FLAGS.GUILDS,
-        Intents.FLAGS.GUILD_MESSAGES,
-        Intents.FLAGS.GUILD_VOICE_STATES
+    Intents.FLAGS.GUILD_MESSAGES,
+    Intents.FLAGS.GUILD_VOICE_STATES
     ]
 })
 
@@ -44,28 +45,35 @@ client.on('messageCreate', async msg => {
 
 
 player.on(AudioPlayerStatus.Playing, () => {
-    if (url_lists.length > 0) {
-        console.log('START PLAYING > ' + url_lists[0])
-        url_lists.shift();
-        if (url_lists.length > 0) {
-            player.play(createAudioResource(ytdl(url_lists[0])))
-        }
-    }
+    console.log('>START PLAYING > ' + url_lists[0])
+    /*  if (url_lists.length > 0) {
+          url_lists.shift();
+          if (url_lists.length > 0) {
+              player.play(createAudioResource(ytdl(url_lists[0])))
+          }
+      }*/
 });
 
 player.on(AudioPlayerStatus.Buffering, () => {
-    console.log("status bvuffering")
+    console.log(">Status: buffering")
+
 });
 
 
 //Cuando el reproductor para un audio
 player.on(AudioPlayerStatus.Idle, () => {
+    console.log("idle")
     try {
         if (url_lists.length > 0) {
-            if (ytdl(url_lists[0])) return
             player.play(createAudioResource(ytdl(url_lists[0])))
             url_lists.shift()
         }
+
+        /*if (url_lists.length > 0) {
+            if (ytdl(url_lists[0])) return
+            player.play(createAudioResource(ytdl(url_lists[0])))
+            //  url_lists.shift()
+        }*/
     } catch (e) {
         console.log(e)
     }
@@ -87,10 +95,10 @@ function procesarComand(command, msg = []) {
             return false
         } else {
             let function_to_call = comandos[command].function
-                //Call function using functionCommand
+            //Call function using functionCommand
             storedFunctions[function_to_call](arguments, msg)
         }
-    } catch (e) {}
+    } catch (e) { }
 
 }
 
@@ -98,7 +106,7 @@ function procesarComand(command, msg = []) {
 
 
 //Event on exception uncaught
-process.on('uncaughtException', function(err) {
+process.on('uncaughtException', function (err) {
     console.log('Excepcion: ' + err);
     console.log('Quitando de la lista: ' + url_lists[0]);
     url_lists.shift()
@@ -114,8 +122,9 @@ function playNextSong() {
 }
 
 
-storedFunctions.playPlayer = async function(args, msg) {
+storedFunctions.playPlayer = async function (args, msg) {
 
+    //if !play
     if (args.length == 1) {
         if (player.state.status == 'idle') {
             if (url_lists.length == 0) {
@@ -147,31 +156,49 @@ storedFunctions.playPlayer = async function(args, msg) {
 
         return;
     } else {
-
-        url_lists.push(args[1]);
-        console.log("URL AÑADIDA AL PLAYER")
-        console.log('status actual : ' + player.state.status)
-
-        if (url_lists.length > 1) {
-            setTimeout(function() { console.log('espero 2') }, 2000);
+        //else !play URL 
+        let play_now = false;
+        if (url_lists.length == 0) {
+            play_now = true
         }
-        if (player.state.status == 'idle' && url_lists.length == 1) {
-            console.log('status idle')
+        url_lists.push(args[1]);
+        // console.log("URL AÑADIDA AL PLAYER")
+        //Check si ya está en un canal de voz
+        //por ahora limitado a 1
+        if (player.subscribers.length == 0) {
+            //si no lo está acceder
+            let voice_channel_id = msg.member.voice.channel.id
+            if (voice_channel_id) {
+                const connection = joinVoiceChannel({
+                    channelId: voice_channel_id,
+                    guildId: msg.guild.id,
+                    adapterCreator: msg.guild.voiceAdapterCreator
+                })
+                connection.subscribe(player)
+            }
+        }
+
+        if (url_lists.length == 1) {
+            let video_url = url_lists[0]
+            await player.play(createAudioResource(await ytdl(video_url)))
+        }
+
+        if (player.state.status == 'idle' && url_lists.length == 1 && false) {
             let voice_channel_id = msg.member.voice.channel.id
             try {
                 //Join voice channel del usuario que envió el comando 
-                if (voice_channel_id) {
-                    const connection = joinVoiceChannel({
-                        channelId: voice_channel_id,
-                        guildId: msg.guild.id,
-                        adapterCreator: msg.guild.voiceAdapterCreator
-                    })
-                    connection.subscribe(player)
-                    if (url_lists.length == 1) {
-                        //setTimeout(function() { console.log('espero 2') }, 2000);
-                        await player.play(createAudioResource(await ytdl(url_lists[0])))
-                    }
-                }
+                /* if (voice_channel_id) {
+                     const connection = joinVoiceChannel({
+                         channelId: voice_channel_id,
+                         guildId: msg.guild.id,
+                         adapterCreator: msg.guild.voiceAdapterCreator
+                     })
+                     connection.subscribe(player)
+                     //  if (url_lists.length == 1) {
+                     //setTimeout(function() { console.log('espero 2') }, 2000);
+                     await player.play(createAudioResource(await ytdl(url_lists[0])))
+                     //   }
+                 }*/
             } catch (e) {
                 console.log(e)
             }
@@ -180,32 +207,35 @@ storedFunctions.playPlayer = async function(args, msg) {
 }
 
 
-storedFunctions.stopPlayer = async function(args) {
+storedFunctions.stopPlayer = async function (args) {
     player.stop();
     console.log("PLAYER STOP")
-        //let yt_song = ytdl("https://www.youtube.com/watch?v=JM3Wyn2VmHg").pipe(fs.createWriteStream('audio/yt_audio.mp3')
+    //let yt_song = ytdl("https://www.youtube.com/watch?v=JM3Wyn2VmHg").pipe(fs.createWriteStream('audio/yt_audio.mp3')
 
 }
 
-storedFunctions.pausePlayer = async function(args) {
+storedFunctions.pausePlayer = async function (args) {
     console.log("PLAYER PAUSE")
     player.pause();
     //let yt_song = ytdl("https://www.youtube.com/watch?v=JM3Wyn2VmHg").pipe(fs.createWriteStream('audio/yt_audio.mp3')
 
 }
 
-storedFunctions.skipSong = async function(args) {
-    player.stop();
-    await player.play(createAudioResource(await ytdl(url_lists[0])))
-    console.log("PLAYER SKIP")
+storedFunctions.skipSong = async function (args) {
+    /*  console.log("paro")
+      player.stop();
+      console.log("parat")
+      await player.play(createAudioResource(await ytdl(url_lists[0])))
+      console.log("plays")
+      console.log("PLAYER SKIP")*/
 
 }
 
-storedFunctions.playerStatus = async function(args) {
+storedFunctions.playerStatus = async function (args) {
     console.log('STATUS PLAYER : ' + player.state.status)
 }
 
-storedFunctions.showQueue = async function(args, msg) {
+storedFunctions.showQueue = async function (args, msg) {
     console.log(url_lists)
     if (url_lists.length == 0) {
         msg.channel.send("La cola está vacía. Para añadir nuevas URLs de Youtube usa '!play URL_VIDEO'");

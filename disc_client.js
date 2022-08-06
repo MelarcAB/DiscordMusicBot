@@ -15,6 +15,10 @@ const { url } = require('inspector');
 const url_lists = []
 var storedFunctions = {}
 
+var stopped = true;
+
+
+
 //Crear var del tipo DiscordClient
 //creo variable myIntents porque no reproducia el audio
 const client = new Discord.Client({
@@ -58,7 +62,7 @@ player.on(AudioPlayerStatus.Buffering, () => {
 player.on(AudioPlayerStatus.Idle, () => {
     console.log("idle")
     try {
-        if (url_lists.length > 0) {
+        if (url_lists.length > 0 && !stopped) {
             url_lists.shift()
             player.play(createAudioResource(ytdl(url_lists[0])))
         }
@@ -120,6 +124,7 @@ storedFunctions.playPlayer = async function (args, msg) {
 
     //if !play
     if (args.length == 1) {
+        stopped = false
         if (player.state.status == 'idle') {
             if (url_lists.length == 0) {
                 console.log("La cola está vacía")
@@ -140,6 +145,8 @@ storedFunctions.playPlayer = async function (args, msg) {
                 if (!ytdl(url_lists[0])) return
                 player.play(createAudioResource(ytdl(url_lists[0])))
                 url_lists.shift();
+            } else {
+                msg.channel.send("El bot está en otro canal de audio.")
             }
 
 
@@ -154,9 +161,11 @@ storedFunctions.playPlayer = async function (args, msg) {
         let play_now = false;
         if (url_lists.length == 0) {
             play_now = true
+            stopped = false
+
         }
         url_lists.push(args[1]);
-        // console.log("URL AÑADIDA AL PLAYER")
+        console.log("URL AÑADIDA AL PLAYER")
         //Check si ya está en un canal de voz
         //por ahora limitado a 1
         if (player.subscribers.length == 0) {
@@ -171,37 +180,17 @@ storedFunctions.playPlayer = async function (args, msg) {
                 connection.subscribe(player)
             }
         }
-
         if (url_lists.length == 1) {
             let video_url = url_lists[0]
             await player.play(createAudioResource(await ytdl(video_url)))
         }
 
-        if (player.state.status == 'idle' && url_lists.length == 1 && false) {
-            let voice_channel_id = msg.member.voice.channel.id
-            try {
-                //Join voice channel del usuario que envió el comando 
-                /* if (voice_channel_id) {
-                     const connection = joinVoiceChannel({
-                         channelId: voice_channel_id,
-                         guildId: msg.guild.id,
-                         adapterCreator: msg.guild.voiceAdapterCreator
-                     })
-                     connection.subscribe(player)
-                     //  if (url_lists.length == 1) {
-                     //setTimeout(function() { console.log('espero 2') }, 2000);
-                     await player.play(createAudioResource(await ytdl(url_lists[0])))
-                     //   }
-                 }*/
-            } catch (e) {
-                console.log(e)
-            }
-        }
     }
 }
 
 
 storedFunctions.stopPlayer = async function (args) {
+    stopped = true
     player.stop();
     console.log("PLAYER STOP")
     //let yt_song = ytdl("https://www.youtube.com/watch?v=JM3Wyn2VmHg").pipe(fs.createWriteStream('audio/yt_audio.mp3')
@@ -211,18 +200,20 @@ storedFunctions.stopPlayer = async function (args) {
 storedFunctions.pausePlayer = async function (args) {
     console.log("PLAYER PAUSE")
     player.pause();
-    //let yt_song = ytdl("https://www.youtube.com/watch?v=JM3Wyn2VmHg").pipe(fs.createWriteStream('audio/yt_audio.mp3')
 
 }
 
 storedFunctions.skipSong = async function (args) {
-    /*  console.log("paro")
-      player.stop();
-      console.log("parat")
-      await player.play(createAudioResource(await ytdl(url_lists[0])))
-      console.log("plays")
-      console.log("PLAYER SKIP")*/
-
+    if (url_lists.length > 1) {
+        console.log("PLAYER SKIP")
+        player.stop();
+        url_lists.shift()
+        await player.play(createAudioResource(await ytdl(url_lists[0])))
+    } else {
+        player.stop();
+        msg.channel.send("No hay más vídeos a reproducir.");
+        console.log("PLAYER CAN'T SKIP")
+    }
 }
 
 storedFunctions.playerStatus = async function (args) {

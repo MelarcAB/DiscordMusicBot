@@ -13,4 +13,4 @@ WORKDIR /cantantebanquillo_app
 
 RUN npm install
 
-CMD node bot.js 
+RUN node bot.js 

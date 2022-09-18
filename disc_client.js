@@ -17,8 +17,8 @@ const url_lists = []
 var storedFunctions = {}
 
 var stopped = true;
-
-
+var resource_local = ""
+var volume_value = 0.8
 
 //Crear var del tipo DiscordClient
 //creo variable myIntents porque no reproducia el audio
@@ -185,10 +185,30 @@ storedFunctions.playPlayer = async function (args, msg) {
         }
         if (url_lists.length == 1) {
             let video_url = url_lists[0]
-            await player.play(createAudioResource(await ytdl(video_url)))
+            resource_local = createAudioResource(await ytdl(video_url), { inlineVolume: true })
+            await player.play(resource_local)
         }
 
     }
+}
+
+
+//sube +0.2 el valor del volumen
+storedFunctions.volumenUp = async function (args) {
+    if (volume_value < 1) {
+        volume_value = (volume_value + 0.2);
+        resource_local.volume.setVolume(volume_value)
+    }
+    console.log(">Volumen: " + volume_value)
+}
+
+//baja  -0.2 el valor del volumen
+storedFunctions.volumenDown = async function (args) {
+    if (volume_value > 0.21) {
+        volume_value = (volume_value - 0.2)
+        resource_local.volume.setVolume(volume_value)
+    }
+    console.log(">Volumen: " + volume_value)
 }
 
 

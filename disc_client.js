@@ -10,6 +10,7 @@ const commands = require("./commands.js");
 const fs = require('fs');
 const { exit } = require('process');
 const { url } = require('inspector');
+const { count } = require('console');
 // import {url} from "inspector"
 
 const url_lists = []
@@ -54,7 +55,6 @@ player.on(AudioPlayerStatus.Playing, () => {
 
 player.on(AudioPlayerStatus.Buffering, () => {
     console.log(">Status: buffering")
-
 });
 
 
@@ -64,7 +64,10 @@ player.on(AudioPlayerStatus.Idle, () => {
     try {
         if (url_lists.length > 0 && !stopped) {
             url_lists.shift()
-            player.play(createAudioResource(ytdl(url_lists[0])))
+            if (url_lists.length > 0) {
+                console.log("entra")
+                player.play(createAudioResource(ytdl(url_lists[0])))
+            }
         }
 
         /*if (url_lists.length > 0) {

@@ -1,34 +1,46 @@
-const { joinVoiceChannel, createAudioResource } = require('@discordjs/voice');
-const ytdl = require('ytdl-core');
-
 const commands = {
-    play: async (args, msg, player) => {
+    play: async (args, msg, poru) => {
         if (!args.length) {
-            msg.reply('Por favor, proporciona un enlace de YouTube.');
+            msg.reply('Por favor, proporciona un enlace o término de búsqueda.');
             return;
         }
 
-        const voiceChannel = msg.member.voice.channel;
-        if (!voiceChannel) {
+        if (!msg.member.voice.channel) {
             msg.reply('Debes estar en un canal de voz para reproducir música.');
             return;
         }
 
-        const connection = joinVoiceChannel({
-            channelId: voiceChannel.id,
+        const trackQuery = args.join(" ");
+        const res = await poru.resolve({ query: trackQuery, source: "scsearch", requester: msg.member });
+
+        if (res.loadType === "LOAD_FAILED") {
+            return msg.reply("Failed to load track.");
+        } else if (res.loadType === "NO_MATCHES") {
+            return msg.reply("No source found!");
+        }
+
+        const player = poru.createConnection({
             guildId: msg.guild.id,
-            adapterCreator: msg.guild.voiceAdapterCreator
+            voiceChannel: msg.member.voice.channelId,
+            textChannel: msg.channel.id,
+            deaf: true,
         });
 
-        const stream = ytdl(args[0], { filter: 'audioonly' });
-        const resource = createAudioResource(stream);
-        player.play(resource);
+        if (res.loadType === "PLAYLIST_LOADED") {
+            for (const track of res.tracks) {
+                track.info.requester = msg.user;
+                player.queue.add(track);
+            }
+            msg.reply(`${res.playlistInfo.name} has been loaded with ${res.tracks.length} tracks.`);
+        } else {
+            const track = res.tracks[0];
+            track.info.requester = msg.user;
+            player.queue.add(track);
+            msg.reply(`Queued Track \n \`${track.info.title}\``);
+        }
 
-        connection.subscribe(player);
-        msg.reply(`Reproduciendo: ${args[0]}`);
+        if (!player.isPlaying && player.isConnected) player.play();
     },
-
-    // Puedes agregar más comandos aquí...
 };
 
 module.exports = commands;

@@ -5,6 +5,10 @@ const disc_client = require('./disc_client');
 
 
 
+
+console.log("started")
+
+
 initBot()
 
 

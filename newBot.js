@@ -1,4 +1,4 @@
-const { Client, GatewayIntentBits } = require("discord.js");
+const { Client, GatewayIntentBits, REST, Routes } = require("discord.js");
 const { Poru } = require("poru");
 const fs = require('fs');
 require('dotenv').config();
@@ -13,6 +13,7 @@ const client = new Client({
 });
 
 // Inicializando Poru
+const commandsData = [];
 
 const nodes = [
     {
@@ -32,9 +33,27 @@ client.poru.on("trackStart", (player, track) => {
     return channel.send(`Now playing \`${track.info.title}\``);
 });
 
-client.once("ready", () => {
+client.once("ready", async() => {
     console.log("Ready!");
     client.poru.init(client);
+    const commandFiles = fs.readdirSync('./commands').filter(file => file.endsWith('.js'));
+    for (const file of commandFiles) {
+        const command = require(`./commands/${file}`);
+        client.commands.set(command.name, command);
+        commandsData.push({
+            name: command.name,
+            description: command.description || 'Sin descripción.' // Si no se proporciona descripción, utiliza una por defecto
+        });
+    }
+        const rest = new REST({ version: '10' }).setToken(process.env.TOKEN);
+
+    // Para registrar globalmente (para todos los servidores):
+    await rest.put(Routes.applicationCommands(client.user.id), { body: commandsData });
+
+
+
+    // Para registrar globalmente (para todos los servidores):
+
 });
 
 // Cargar comandos
@@ -46,7 +65,7 @@ for (const file of commandFiles) {
 }
 
 client.on('messageCreate', async message => {
-    if (!message.content.startsWith('!') || message.author.bot) return;
+    if (!message.content.startsWith('/') || message.author.bot) return;
 
     const args = message.content.slice(1).split(/ +/);
     const commandName = args.shift().toLowerCase();
